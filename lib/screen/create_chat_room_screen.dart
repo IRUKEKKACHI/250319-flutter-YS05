@@ -1,17 +1,115 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
-class CreateChatRoomScreen extends StatelessWidget {
-  const CreateChatRoomScreen({super.key});
+class CreateChatRoomScreen extends StatefulWidget {
+  @override
+  State<CreateChatRoomScreen> createState() => _CreateChatRoomScreenState();
+}
+
+class _CreateChatRoomScreenState extends State<CreateChatRoomScreen> {
+  final _formKey = GlobalKey<FormState>();
+  final TextEditingController titleController = TextEditingController();
+  final TextEditingController passwordController = TextEditingController();
+  bool isPrivate = false;
+  bool _isLoading = false;
+
+  @override
+  void dispose() {
+    titleController.dispose();
+    passwordController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _createChatRoom() async {
+    if (_formKey.currentState!.validate()) {
+      setState(() {
+        _isLoading = true;
+      });
+
+      try {
+        final user = FirebaseAuth.instance.currentUser;
+        if (user == null) return;
+        await FirebaseFirestore.instance.collection('chatrooms').add({
+          'title': titleController.text.trim(),
+          'isPrivate': isPrivate,
+          'password': isPrivate ? passwordController.text : null,
+          'ownerId': user.uid,
+          'createdAt': FieldValue.serverTimestamp(),
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('Chat room created successfully'),
+          backgroundColor: Colors.green,
+        ));
+
+        Future.delayed(Duration(seconds: 1), () {
+          Navigator.pushReplacementNamed(context, '/chat');
+        });
+      } catch (e) {
+        print(e);
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('Error occurred'),
+          backgroundColor: Colors.red,
+        ));
+      } finally {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Center(
-        child: Text(
-          'Create Chat Room Screen',
-          style: TextStyle(
-            fontSize: 30,
-            fontWeight: FontWeight.bold,
+      appBar: AppBar(
+        title: Text('Create Chat Room'),
+      ),
+      body: Padding(
+        padding: EdgeInsets.all(16),
+        child: Form(
+          key: _formKey,
+          child: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(15.0),
+                child: TextFormField(
+                  controller: titleController,
+                  decoration: InputDecoration(labelText: 'Chat Room Title'),
+                  validator: (value) => value!.isEmpty ? 'Enter a title' : null,
+                ),
+              ),
+              SwitchListTile(
+                title: Text('Private Chat Room'),
+                value: isPrivate,
+                onChanged: (value) {
+                  setState(() {
+                    isPrivate = value;
+                  });
+                },
+              ),
+              if (isPrivate)
+                Padding(
+                  padding: const EdgeInsets.all(15.0),
+                  child: TextFormField(
+                    controller: passwordController,
+                    decoration: InputDecoration(
+                      labelText: 'Password',
+                    ),
+                    obscureText: true,
+                    validator: (value) =>
+                        value!.isEmpty ? 'Enter a password' : null,
+                  ),
+                ),
+              SizedBox(height: 20),
+              _isLoading
+                  ? CircularProgressIndicator()
+                  : ElevatedButton(
+                      onPressed: _createChatRoom,
+                      child: Text('Create'),
+                    )
+            ],
           ),
         ),
       ),
