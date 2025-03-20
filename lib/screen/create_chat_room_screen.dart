@@ -30,7 +30,8 @@ class _CreateChatRoomScreenState extends State<CreateChatRoomScreen> {
       try {
         final user = FirebaseAuth.instance.currentUser;
         if (user == null) return;
-        await FirebaseFirestore.instance.collection('chatrooms').add({
+        DocumentReference chatRoom =
+            await FirebaseFirestore.instance.collection('chatrooms').add({
           'title': titleController.text.trim(),
           'isPrivate': isPrivate,
           'password': isPrivate ? passwordController.text : null,
@@ -38,14 +39,24 @@ class _CreateChatRoomScreenState extends State<CreateChatRoomScreen> {
           'createdAt': FieldValue.serverTimestamp(),
         });
 
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text('Chat room created successfully'),
-          backgroundColor: Colors.green,
-        ));
-
-        Future.delayed(Duration(seconds: 1), () {
-          Navigator.pushReplacementNamed(context, '/chat');
-        });
+        showDialog(
+            context: context,
+            builder: (context) {
+              return AlertDialog(
+                title: Text("New Chat Room Created"),
+                content: Text("Chat room is created successfully."),
+                actions: [
+                  TextButton(
+                      onPressed: () =>
+                          Navigator.pushNamed(context, '/chat', arguments: {
+                            'chatRoomId': chatRoom.id,
+                            'chatRoomTitle': titleController.text.trim(),
+                            'ownerId': user.uid,
+                          }),
+                      child: Text('OK'))
+                ],
+              );
+            });
       } catch (e) {
         print(e);
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(

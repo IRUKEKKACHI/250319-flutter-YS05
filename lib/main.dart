@@ -28,15 +28,20 @@ class FlutterYS05 extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      initialRoute: '/',
+      initialRoute: '/create',
       routes: {
         '/': (context) => ChatRoomListScreen(),
         '/create': (context) => CreateChatRoomScreen(),
       },
       onGenerateRoute: (settings) {
-        if (settings.name == '/detail') {
+        if (settings.name == '/chat') {
           final args = settings.arguments as Map<String, dynamic>;
-          return null;
+          return MaterialPageRoute(
+            builder: (context) => ChatRoomScreen(
+                chatRoomId: args['chatRoomId'],
+                chatRoomTitle: args['chatRoomTitle'],
+                ownerId: args['ownerId']),
+          );
         }
         return null;
       },
